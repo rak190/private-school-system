@@ -59,14 +59,7 @@ export default function TeacherAttendance() {
     }
   };
 
-  const cycleStatus = (currentStatus) => {
-    if (currentStatus === 'វត្តមាន') return 'អវត្តមាន';
-    if (currentStatus === 'អវត្តមាន') return 'ច្បាប់';
-    return 'វត្តមាន';
-  };
-
-  const handleStatusClick = (studentId, currentStatus) => {
-    const newStatus = cycleStatus(currentStatus);
+  const handleStatusChange = (studentId, newStatus) => {
     setStudents(students.map(s => s.id === studentId ? { ...s, status: newStatus } : s));
   };
 
@@ -177,68 +170,67 @@ export default function TeacherAttendance() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 mt-6">
-                {students.map((student, idx) => {
-                  let bgColor = 'bg-white';
-                  let shadowColor = 'shadow-slate-200';
-                  let borderColor = 'border-slate-200';
-                  let textColor = 'text-slate-700';
-                  let labelBg = 'bg-slate-100';
-                  let translate = ''; // For the pressed effect
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[600px]">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      <th className="pb-3 pl-4 w-16">ល.រ</th>
+                      <th className="pb-3">នាមត្រកូល និងនាមខ្លួន</th>
+                      <th className="pb-3 w-20">ភេទ</th>
+                      <th className="pb-3 text-center">ស្ថានភាពអវត្តមាន</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm font-medium text-slate-700">
+                    {students.map((student, idx) => (
+                      <tr key={student.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 pl-4 text-slate-400">{idx + 1}</td>
+                        <td className="py-4 text-slate-800 font-bold">{student.lastName} {student.firstName}</td>
+                        <td className="py-4 text-slate-500">{student.gender}</td>
+                        <td className="py-4">
+                          <div className="flex items-center justify-center gap-4">
+                            
+                            <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-full border transition-colors ${student.status === 'វត្តមាន' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                              <input 
+                                type="radio" 
+                                name={`status-${student.id}`} 
+                                value="វត្តមាន"
+                                checked={student.status === 'វត្តមាន'}
+                                onChange={() => handleStatusChange(student.id, 'វត្តមាន')}
+                                className="hidden"
+                              />
+                              <span className="font-bold text-xs">វត្តមាន</span>
+                            </label>
 
-                  if (student.status === 'វត្តមាន') {
-                    bgColor = 'bg-emerald-50';
-                    shadowColor = 'shadow-emerald-200';
-                    borderColor = 'border-emerald-300';
-                    textColor = 'text-emerald-900';
-                    labelBg = 'bg-emerald-500 text-white';
-                  } else if (student.status === 'អវត្តមាន') {
-                    bgColor = 'bg-rose-50';
-                    shadowColor = 'shadow-rose-100';
-                    borderColor = 'border-rose-300';
-                    textColor = 'text-rose-900';
-                    labelBg = 'bg-rose-500 text-white';
-                    translate = 'translate-y-1 shadow-sm'; // Depressed effect
-                  } else if (student.status === 'ច្បាប់') {
-                    bgColor = 'bg-blue-50';
-                    shadowColor = 'shadow-blue-100';
-                    borderColor = 'border-blue-300';
-                    textColor = 'text-blue-900';
-                    labelBg = 'bg-blue-500 text-white';
-                    translate = 'translate-y-1 shadow-sm'; // Depressed effect
-                  }
+                            <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-full border transition-colors ${student.status === 'អវត្តមាន' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                              <input 
+                                type="radio" 
+                                name={`status-${student.id}`} 
+                                value="អវត្តមាន"
+                                checked={student.status === 'អវត្តមាន'}
+                                onChange={() => handleStatusChange(student.id, 'អវត្តមាន')}
+                                className="hidden"
+                              />
+                              <span className="font-bold text-xs">អវត្តមាន</span>
+                            </label>
 
-                  return (
-                    <button
-                      key={student.id}
-                      onClick={() => handleStatusClick(student.id, student.status)}
-                      className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-200 select-none cursor-pointer focus:outline-none focus:ring-4 focus:ring-brand-blue/20 
-                        ${bgColor} ${borderColor} ${textColor}
-                        ${translate ? translate : `shadow-[0_4px_0_0_${shadowColor.replace('shadow-', '')}] hover:-translate-y-1 hover:shadow-[0_6px_0_0_${shadowColor.replace('shadow-', '')}]`}
-                        active:translate-y-1 active:shadow-none
-                      `}
-                      style={{ 
-                        WebkitTapHighlightColor: 'transparent',
-                        boxShadow: translate ? 'none' : '' 
-                      }}
-                    >
-                      <div className="w-12 h-12 rounded-full bg-white/60 flex items-center justify-center font-bold text-lg mb-2 shadow-inner uppercase border border-white/40">
-                        {student.firstName.substring(0, 1)}
-                      </div>
-                      <div className="font-bold text-center leading-tight truncate w-full text-sm sm:text-base">
-                        {student.lastName} {student.firstName}
-                      </div>
-                      <div className="text-[10px] font-bold text-center mt-1 text-slate-500 uppercase tracking-widest">
-                        {student.gender === 'ប្រុស' ? 'M' : 'F'}
-                      </div>
-                      
-                      {/* Status Label Pill */}
-                      <div className={`absolute -top-3 shadow-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${labelBg}`}>
-                        {student.status || 'វត្តមាន'}
-                      </div>
-                    </button>
-                  );
-                })}
+                            <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-full border transition-colors ${student.status === 'ច្បាប់' ? 'bg-brand-blue/10 border-brand-blue/30 text-brand-blue' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                              <input 
+                                type="radio" 
+                                name={`status-${student.id}`} 
+                                value="ច្បាប់"
+                                checked={student.status === 'ច្បាប់'}
+                                onChange={() => handleStatusChange(student.id, 'ច្បាប់')}
+                                className="hidden"
+                              />
+                              <span className="font-bold text-xs">ច្បាប់</span>
+                            </label>
+
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
               <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
