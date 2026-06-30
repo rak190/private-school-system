@@ -11,10 +11,30 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [classes, setClasses] = useState([]);
+  const [selectedClassId, setSelectedClassId] = useState('all');
+  const [selectedSemester, setSelectedSemester] = useState('all');
+  const [attendanceRange, setAttendanceRange] = useState('5');
+
+  useEffect(() => {
+    // Fetch classes for global filter
+    const fetchClasses = async () => {
+      try {
+        const res = await fetch('/api/classes');
+        const json = await res.json();
+        if (json.success) setClasses(json.data);
+      } catch (err) {
+        console.error('Failed to fetch classes:', err);
+      }
+    };
+    fetchClasses();
+  }, []);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setLoading(true);
       try {
-        const res = await fetch('/api/dashboard/teacher');
+        const res = await fetch(`/api/dashboard/teacher?classId=${selectedClassId}&semester=${selectedSemester}&attendanceRange=${attendanceRange}`);
         const json = await res.json();
         if (json.success) {
           setData(json.data);
@@ -29,7 +49,7 @@ export default function TeacherDashboard() {
       }
     };
     fetchDashboardData();
-  }, []);
+  }, [selectedClassId, selectedSemester, attendanceRange]);
 
   if (loading) {
     return (
@@ -54,7 +74,15 @@ export default function TeacherDashboard() {
       <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
         <h1 className="text-3xl font-bold text-slate-800 tracking-tight">ផ្ទាំងគ្រប់គ្រងគ្រូបង្រៀន</h1>
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-80">
+          <select 
+            value={selectedClassId}
+            onChange={(e) => setSelectedClassId(e.target.value)}
+            className="bg-white border border-slate-200 rounded-full py-2.5 px-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+          >
+            <option value="all">គ្រប់ថ្នាក់ទាំងអស់</option>
+            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <div className="relative hidden md:block w-64">
             <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
             <input type="text" placeholder="ស្វែងរក..." className="w-full bg-white border-none rounded-full py-3 pl-12 pr-4 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-blue text-slate-700 placeholder:text-slate-400" />
           </div>
@@ -102,7 +130,9 @@ export default function TeacherDashboard() {
         <div className="lg:col-span-4 bg-white p-6 rounded-[24px] shadow-sm flex flex-col justify-between min-h-[300px]">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-slate-800">សិស្ស</h3>
-            <span className="text-xs font-semibold text-brand-muted bg-slate-50 px-2 py-1 rounded">សរុបទាំងអស់ ⌄</span>
+            <span className="text-xs font-semibold text-brand-muted bg-slate-50 px-2 py-1 rounded">
+              {selectedClassId === 'all' ? 'សរុបទាំងអស់' : classes.find(c => c.id.toString() === selectedClassId)?.name}
+            </span>
           </div>
           <div className="flex justify-center mb-6 flex-1 items-center">
             <div className="donut-chart scale-90 sm:scale-100 relative w-48 h-48 rounded-full" 
@@ -131,7 +161,15 @@ export default function TeacherDashboard() {
         <div className="lg:col-span-8 bg-white p-6 rounded-[24px] shadow-sm flex flex-col min-h-[300px] overflow-x-auto">
           <div className="flex justify-between items-center mb-4 shrink-0">
             <h3 className="font-bold text-slate-800">លទ្ធផលសិក្សា</h3>
-            <span className="text-xs font-semibold text-brand-muted bg-slate-50 px-2 py-1 rounded">មធ្យមភាគប្រចាំខែ ⌄</span>
+            <select 
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              className="text-xs font-bold text-brand-blue bg-blue-50 border-none px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue cursor-pointer"
+            >
+              <option value="all">គ្រប់ឆមាស</option>
+              <option value="ឆមាសទី១">ឆមាសទី១</option>
+              <option value="ឆមាសទី២">ឆមាសទី២</option>
+            </select>
           </div>
           {data.scoresChart && data.scoresChart.length > 0 ? (
             <>
@@ -163,8 +201,16 @@ export default function TeacherDashboard() {
         {/* Attendance Bar Chart */}
         <div className="lg:col-span-5 bg-white p-6 rounded-[24px] shadow-sm flex flex-col min-h-[300px]">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-800">វត្តមាន (៥ ថ្ងៃចុងក្រោយ)</h3>
-            <span className="text-xs font-semibold text-brand-muted bg-slate-50 px-2 py-1 rounded">ប្រចាំសប្តាហ៍ ⌄</span>
+            <h3 className="font-bold text-slate-800">វត្តមាន {attendanceRange === '5' ? '(៥ ថ្ងៃ)' : attendanceRange === '10' ? '(១០ ថ្ងៃ)' : '(៣០ ថ្ងៃ)'}</h3>
+            <select 
+              value={attendanceRange}
+              onChange={(e) => setAttendanceRange(e.target.value)}
+              className="text-xs font-bold text-amber-700 bg-amber-50 border-none px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+            >
+              <option value="5">៥ ថ្ងៃចុងក្រោយ</option>
+              <option value="10">១០ ថ្ងៃចុងក្រោយ</option>
+              <option value="30">៣០ ថ្ងៃចុងក្រោយ</option>
+            </select>
           </div>
           
           {data.attendanceChart && data.attendanceChart.length > 0 ? (

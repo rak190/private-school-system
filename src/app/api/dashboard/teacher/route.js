@@ -14,6 +14,11 @@ export async function GET() {
   }
 
   try {
+    const url = new URL(request.url);
+    const filterClassId = url.searchParams.get('classId');
+    const filterSemester = url.searchParams.get('semester'); // 'ឆមាសទី១' or 'ឆមាសទី២'
+    const attendanceRange = url.searchParams.get('attendanceRange'); // '5', '10', '30'
+
     // 1. Get current teacher
     const currentUser = await db.select().from(users).where(eq(users.username, username)).limit(1);
     if (!currentUser.length) {
@@ -22,7 +27,13 @@ export async function GET() {
     const teacherId = currentUser[0].id;
 
     // 2. Get Teacher's Classes
-    const teacherClasses = await db.select({ id: classes.id }).from(classes).where(eq(classes.teacherId, teacherId));
+    let teacherClassesQuery = db.select({ id: classes.id }).from(classes).where(eq(classes.teacherId, teacherId));
+    
+    if (filterClassId && filterClassId !== 'all') {
+      teacherClassesQuery = db.select({ id: classes.id }).from(classes).where(and(eq(classes.id, Number(filterClassId)), eq(classes.teacherId, teacherId)));
+    }
+    
+    const teacherClasses = await teacherClassesQuery;
     const classIds = teacherClasses.map(c => c.id);
     const totalClasses = classIds.length;
 
@@ -129,17 +140,28 @@ export async function GET() {
       }
     });
     
-    // Sort and take last 5 days
+    // Sort and take requested range
+    const rangeLimit = attendanceRange ? Number(attendanceRange) : 5;
     const attendanceChart = Object.values(dateMap)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(-5);
+      .slice(-rangeLimit);
 
     // 8. Scores Chart (Average by Month)
-    const scoresByMonthData = await db.select({
+    let scoresQuery = db.select({
       month: scores.examMonth,
       score: scores.examScore
     }).from(scores)
     .where(inArray(scores.studentId, studentIds));
+
+    if (filterSemester && filterSemester !== 'all') {
+      scoresQuery = db.select({
+        month: scores.examMonth,
+        score: scores.examScore
+      }).from(scores)
+      .where(and(inArray(scores.studentId, studentIds), eq(scores.semester, filterSemester)));
+    }
+
+    const scoresByMonthData = await scoresQuery;
 
     const monthMap = {};
     scoresByMonthData.forEach(record => {

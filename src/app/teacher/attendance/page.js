@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ClipboardCheck, Calendar, Users, Save, CheckCircle2 } from 'lucide-react';
+import { ClipboardCheck, Calendar, Users, Save, CheckCircle2, BarChart2 } from 'lucide-react';
 
 export default function TeacherAttendance() {
   const [classes, setClasses] = useState([]);
@@ -12,18 +12,29 @@ export default function TeacherAttendance() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  const [activeTab, setActiveTab] = useState('take'); // 'take' | 'report'
+  const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [reportData, setReportData] = useState([]);
+  const [reportLoading, setReportLoading] = useState(false);
 
   useEffect(() => {
     fetchClasses();
   }, []);
 
   useEffect(() => {
-    if (selectedClassId && selectedDate) {
+    if (selectedClassId && selectedDate && activeTab === 'take') {
       fetchAttendance();
     } else {
       setStudents([]);
     }
-  }, [selectedClassId, selectedDate]);
+  }, [selectedClassId, selectedDate, activeTab]);
+
+  useEffect(() => {
+    if (selectedClassId && reportMonth && activeTab === 'report') {
+      fetchReport();
+    }
+  }, [selectedClassId, reportMonth, activeTab]);
 
   const fetchClasses = async () => {
     try {
@@ -56,6 +67,23 @@ export default function TeacherAttendance() {
       console.error('Failed to fetch attendance:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReport = async () => {
+    setReportLoading(true);
+    try {
+      const res = await fetch(`/api/attendance/report?classId=${selectedClassId}&month=${reportMonth}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setReportData(json.data);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch attendance report:', err);
+    } finally {
+      setReportLoading(false);
     }
   };
 
@@ -106,20 +134,48 @@ export default function TeacherAttendance() {
         </div>
       </header>
 
+      {/* Tabs */}
+      <div className="flex gap-4 mb-6 border-b border-slate-200">
+        <button 
+          onClick={() => setActiveTab('take')}
+          className={`pb-3 px-2 font-bold text-sm transition-all ${activeTab === 'take' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <div className="flex items-center gap-2"><ClipboardCheck className="w-4 h-4" /> ស្រង់វត្តមាន</div>
+        </button>
+        <button 
+          onClick={() => setActiveTab('report')}
+          className={`pb-3 px-2 font-bold text-sm transition-all ${activeTab === 'report' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <div className="flex items-center gap-2"><BarChart2 className="w-4 h-4" /> របាយការណ៍វត្តមាន</div>
+        </button>
+      </div>
+
       <div className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-500 uppercase flex items-center gap-2">
             <Users className="w-4 h-4" /> ជ្រើសរើសថ្នាក់រៀនរបស់អ្នក
           </h2>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <input 
-              type="date" 
-              value={selectedDate}
-              onChange={e => setSelectedDate(e.target.value)}
-              className="bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 cursor-pointer"
-            />
-          </div>
+          {activeTab === 'take' ? (
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <input 
+                type="date" 
+                value={selectedDate}
+                onChange={e => setSelectedDate(e.target.value)}
+                className="bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 cursor-pointer"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <input 
+                type="month" 
+                value={reportMonth}
+                onChange={e => setReportMonth(e.target.value)}
+                className="bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 cursor-pointer"
+              />
+            </div>
+          )}
         </div>
 
         {classes.length === 0 ? (
@@ -155,13 +211,14 @@ export default function TeacherAttendance() {
         )}
       </div>
 
-      {selectedClassId && selectedDate ? (
+      {selectedClassId && (activeTab === 'take' ? selectedDate : reportMonth) ? (
         <div className="bg-white rounded-[24px] border border-slate-100 p-6 shadow-sm">
-          {loading ? (
-            <div className="py-12 text-center text-brand-muted font-medium">កំពុងទាញយកបញ្ជីសិស្ស...</div>
-          ) : students.length === 0 ? (
-            <div className="py-12 text-center text-brand-muted font-medium">មិនមានសិស្សនៅក្នុងថ្នាក់នេះទេ</div>
-          ) : (
+          {activeTab === 'take' ? (
+            loading ? (
+              <div className="py-12 text-center text-brand-muted font-medium">កំពុងទាញយកបញ្ជីសិស្ស...</div>
+            ) : students.length === 0 ? (
+              <div className="py-12 text-center text-brand-muted font-medium">មិនមានសិស្សនៅក្នុងថ្នាក់នេះទេ</div>
+            ) : (
             <>
               <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
                 <h3 className="font-bold text-slate-800 text-lg">បញ្ជីសិស្ស ({students.length})</h3>
@@ -244,11 +301,45 @@ export default function TeacherAttendance() {
                 </button>
               </div>
             </>
+          ) : (
+            <>
+              {/* Report Tab Content */}
+              {reportLoading ? (
+                <div className="py-12 text-center text-brand-muted font-medium">កំពុងទាញយកររបាយការណ៍...</div>
+              ) : reportData.length === 0 ? (
+                <div className="py-12 text-center text-brand-muted font-medium">មិនមានសិស្សនៅក្នុងថ្នាក់នេះទេ</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[600px]">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        <th className="pb-3 pl-4 w-16">ល.រ</th>
+                        <th className="pb-3">នាមត្រកូល និងនាមខ្លួន</th>
+                        <th className="pb-3 text-center">វត្តមាន</th>
+                        <th className="pb-3 text-center">អវត្តមាន</th>
+                        <th className="pb-3 text-center">ច្បាប់</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm font-medium text-slate-700">
+                      {reportData.map((student, idx) => (
+                        <tr key={student.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                          <td className="py-4 pl-4 text-slate-400">{idx + 1}</td>
+                          <td className="py-4 text-slate-800 font-bold">{student.lastName} {student.firstName}</td>
+                          <td className="py-4 text-center font-bold text-emerald-600">{student.totalPresent}</td>
+                          <td className="py-4 text-center font-bold text-rose-600">{student.totalAbsent}</td>
+                          <td className="py-4 text-center font-bold text-brand-blue">{student.totalLeave}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : (
         <div className="py-12 text-center text-brand-muted font-medium">
-          សូមជ្រើសរើសថ្នាក់រៀន និងកាលបរិច្ឆេទ ដើម្បីកត់ត្រាអវត្តមាន
+          សូមជ្រើសរើសថ្នាក់រៀន និងកាលបរិច្ឆេទ ដើម្បីកត់ត្រាអវត្តមាន ឬមើលរបាយការណ៍
         </div>
       )}
     </>
