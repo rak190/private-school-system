@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Award, Save, Download, FileSpreadsheet, Search, Filter, Plus, X } from 'lucide-react';
+import { Award, Save, Download, FileSpreadsheet, Search, Filter, Plus, X, Trash2 } from 'lucide-react';
 
 const MONTHS = ['មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'];
 const SEMESTERS = ['ឆមាសទី១', 'ឆមាសទី២'];
@@ -171,6 +171,37 @@ export default function TeacherGrades() {
     }
   };
 
+  const handleDeleteSubject = async (subjectToDelete) => {
+    if (!confirm(`តើអ្នកពិតជាចង់លុបមុខវិជ្ជា "${subjectToDelete}" មែនទេ? ពិន្ទុសម្រាប់មុខវិជ្ជានេះនឹងត្រូវបាត់បង់ប្រសិនបើអ្នករក្សាទុក។`)) return;
+
+    const updatedSubjects = subjects.filter(s => s !== subjectToDelete);
+    const gradeSubjectsStr = updatedSubjects.join(',');
+
+    try {
+      const res = await fetch(`/api/classes/${selectedClassId}/subjects`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gradeSubjects: gradeSubjectsStr })
+      });
+      if (res.ok) {
+        setSubjects(updatedSubjects);
+        setClasses(classes.map(c => c.id.toString() === selectedClassId ? { ...c, gradeSubjects: gradeSubjectsStr } : c));
+        
+        setScores(prev => {
+           const newScores = { ...prev };
+           Object.keys(newScores).forEach(key => {
+             if (key.endsWith(`-${subjectToDelete}`)) {
+               delete newScores[key];
+             }
+           });
+           return newScores;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to delete subject:', err);
+    }
+  };
+
   // Compute Totals, Average, and Rank
   const computedStudents = students.map(student => {
     let totalScore = 0;
@@ -288,8 +319,15 @@ export default function TeacherGrades() {
                   <th rowSpan={2} className="p-4 bg-slate-50 border-r border-b border-slate-200 font-bold text-slate-600 text-sm sticky left-16 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">ឈ្មោះសិស្ស</th>
                   
                   {subjects.map((sub, idx) => (
-                    <th key={idx} colSpan={2} className="p-3 bg-slate-50 border-r border-b border-slate-200 text-center font-bold text-brand-blue text-sm">
+                    <th key={idx} colSpan={1} className="p-3 bg-slate-50 border-r border-b border-slate-200 text-center font-bold text-brand-blue text-sm relative group">
                       {sub}
+                      <button 
+                        onClick={() => handleDeleteSubject(sub)} 
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded transition-all print:hidden"
+                        title="លុបមុខវិជ្ជា"
+                      >
+                         <Trash2 className="w-3 h-3" />
+                      </button>
                     </th>
                   ))}
                   
