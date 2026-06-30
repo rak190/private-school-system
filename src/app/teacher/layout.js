@@ -18,6 +18,10 @@ export default function TeacherLayout({ children }) {
   const [calendarDate, setCalendarDate] = useState(new Date());
 
   const [events, setEvents] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotificationsMobile, setShowNotificationsMobile] = useState(false);
+  const [showNotificationsDesktop, setShowNotificationsDesktop] = useState(false);
+
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
@@ -51,6 +55,11 @@ export default function TeacherLayout({ children }) {
               .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate))
               .slice(0, 4);
             setEvents(upcoming);
+
+            const recent = [...json.data]
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .slice(0, 3);
+            setNotifications(recent);
           }
         }
       } catch (err) {
@@ -123,6 +132,30 @@ export default function TeacherLayout({ children }) {
   
   const khmerMonths = ['មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'];
 
+  const renderNotificationDropdown = (isOpen, setIsOpen, isMobile = false) => {
+    if (!isOpen) return null;
+    return (
+      <div className={`absolute ${isMobile ? 'right-0 top-full mt-4 w-[calc(100vw-48px)]' : 'right-0 top-full mt-2 w-72'} bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden`}>
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+          <h4 className="font-bold text-slate-800 text-sm">ការជូនដំណឹង</h4>
+          <Link href="/teacher/news" className="text-xs text-brand-blue font-bold hover:underline" onClick={() => setIsOpen(false)}>មើលទាំងអស់</Link>
+        </div>
+        <div className="max-h-[300px] overflow-y-auto">
+          {notifications.length === 0 ? (
+            <div className="p-6 text-center text-slate-400 text-sm">គ្មានការជូនដំណឹងទេ</div>
+          ) : (
+            notifications.map(n => (
+              <Link key={n.id} href="/teacher/news" onClick={() => setIsOpen(false)} className="block p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                <h5 className="font-bold text-sm text-slate-800 mb-1 line-clamp-1">{n.title}</h5>
+                <p className="text-xs text-slate-500 line-clamp-2">{n.content}</p>
+              </Link>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white h-screen w-full flex flex-col lg:flex-row overflow-hidden font-sans text-brand-text selection:bg-brand-blue/30 relative">
 
@@ -133,11 +166,14 @@ export default function TeacherLayout({ children }) {
           <span className="text-xl font-extrabold text-slate-900 tracking-tight">Good Future</span>
         </div>
         <div className="flex items-center gap-4">
-          <button onClick={() => { setRightMenuOpen(!rightMenuOpen); setLeftMenuOpen(false); }} className="relative text-slate-600">
-            <Bell className="w-6 h-6" />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-          </button>
-          <button onClick={() => { setLeftMenuOpen(!leftMenuOpen); setRightMenuOpen(false); }} className="text-slate-600">
+          <div className="relative">
+            <button onClick={() => { setShowNotificationsMobile(!showNotificationsMobile); setLeftMenuOpen(false); setRightMenuOpen(false); }} className="relative text-slate-600 p-2 hover:bg-slate-50 rounded-full transition-colors">
+              <Bell className="w-6 h-6" />
+              {notifications.length > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+            </button>
+            {renderNotificationDropdown(showNotificationsMobile, setShowNotificationsMobile, true)}
+          </div>
+          <button onClick={() => { setLeftMenuOpen(!leftMenuOpen); setRightMenuOpen(false); setShowNotificationsMobile(false); }} className="text-slate-600 p-2 hover:bg-slate-50 rounded-full transition-colors">
             {leftMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
@@ -216,8 +252,11 @@ export default function TeacherLayout({ children }) {
             </div>
           </div>
           <div className="relative hidden lg:block">
-            <Bell className="w-5 h-5 text-slate-600" />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            <button onClick={() => setShowNotificationsDesktop(!showNotificationsDesktop)} className="relative text-slate-600 p-2 hover:bg-slate-50 rounded-full transition-colors">
+              <Bell className="w-5 h-5" />
+              {notifications.length > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+            </button>
+            {renderNotificationDropdown(showNotificationsDesktop, setShowNotificationsDesktop)}
           </div>
         </div>
 
