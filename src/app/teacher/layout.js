@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -12,6 +12,43 @@ export default function TeacherLayout({ children }) {
   const pathname = usePathname();
   const [leftMenuOpen, setLeftMenuOpen] = useState(false);
   const [rightMenuOpen, setRightMenuOpen] = useState(false);
+
+  const [events, setEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const res = await fetch('/api/announcements');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) {
+            const now = new Date();
+            now.setHours(0,0,0,0);
+            
+            const upcoming = json.data
+              .filter(a => a.type === 'event' && new Date(a.eventDate) >= now)
+              .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate))
+              .slice(0, 4);
+            setEvents(upcoming);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch events:', err);
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+    fetchEvents();
+  }, []);
+
+  const formatEventDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const months = ['មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'];
+    return `${date.getDate()} ${months[date.getMonth()]}`;
+  };
 
   const handleLogout = () => {
     document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
@@ -146,26 +183,32 @@ export default function TeacherLayout({ children }) {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-slate-800">ព្រឹត្តិការណ៍បន្ទាប់</h3>
-            <MoreHorizontal className="w-5 h-5 text-slate-400" />
           </div>
           <div className="space-y-3">
-            <div className="bg-white border border-slate-100 rounded-[16px] p-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="bg-brand-yellow text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded">15 កក្កដា</span>
-                <span className="text-[10px] text-brand-muted font-medium">7:00 ព្រឹក - 8:00 ព្រឹក</span>
+            {loadingEvents ? (
+              // Skeleton loading
+              [...Array(2)].map((_, i) => (
+                <div key={i} className="bg-white border border-slate-100 rounded-[16px] p-4 animate-pulse">
+                  <div className="h-4 bg-slate-200 rounded w-20 mb-3"></div>
+                  <div className="h-5 bg-slate-200 rounded w-full mb-2"></div>
+                  <div className="h-3 bg-slate-100 rounded w-16"></div>
+                </div>
+              ))
+            ) : events.length === 0 ? (
+              <div className="bg-slate-50 border border-slate-100 rounded-[16px] p-6 text-center">
+                 <p className="text-sm font-medium text-slate-400">មិនមានព្រឹត្តិការណ៍បន្ទាប់ទេ</p>
               </div>
-              <h4 className="text-sm font-bold text-slate-800 mb-1 leading-snug">ស្វាគមន៍សិស្សថ្មី</h4>
-              <span className="text-xs text-brand-blue font-semibold">ថ្នាក់ទី 7</span>
-            </div>
-            
-            <div className="bg-white border border-slate-100 rounded-[16px] p-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="bg-brand-yellow text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded">19 កក្កដា</span>
-                <span className="text-[10px] text-brand-muted font-medium">10:00 ព្រឹក - 11:00 ព្រឹក</span>
-              </div>
-              <h4 className="text-sm font-bold text-slate-800 mb-1 leading-snug">ប្រគល់តំណែងសិស្ស</h4>
-              <span className="text-xs text-brand-blue font-semibold">ថ្នាក់ទី 8</span>
-            </div>
+            ) : (
+              events.map((event) => (
+                <div key={event.id} onClick={() => setSelectedEvent(event)} className="bg-white border border-slate-100 rounded-[16px] p-4 shadow-sm hover:shadow-md transition-all hover:border-brand-blue/30 cursor-pointer group">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="bg-brand-yellow/20 text-yellow-900 group-hover:bg-brand-yellow text-[10px] font-bold px-2 py-0.5 rounded transition-colors">{formatEventDate(event.eventDate)}</span>
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-800 mb-1 leading-snug line-clamp-2">{event.title}</h4>
+                  <span className="text-xs text-brand-blue font-semibold">{event.audience === 'everyone' ? 'សម្រាប់ទាំងអស់គ្នា' : event.audience === 'teachers' ? 'សម្រាប់គ្រូបង្រៀន' : 'សម្រាប់សិស្ស'}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </aside>
@@ -205,6 +248,43 @@ export default function TeacherLayout({ children }) {
           
         </Link>
       </div>
+
+      {/* ================= EVENT DETAILS MODAL ================= */}
+      {selectedEvent && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-slate-800">ព័ត៌មានព្រឹត្តិការណ៍</h2>
+              <button onClick={() => setSelectedEvent(null)} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="inline-block bg-brand-yellow text-yellow-900 text-xs font-bold px-3 py-1 rounded-full mb-4">
+                {formatEventDate(selectedEvent.eventDate)}
+              </div>
+              <h3 className="text-2xl font-bold text-slate-800 mb-4">{selectedEvent.title}</h3>
+              
+              {selectedEvent.imageUrl && (
+                <img src={selectedEvent.imageUrl} alt={selectedEvent.title} className="w-full rounded-2xl mb-6 object-cover border border-slate-100" />
+              )}
+              
+              <div className="prose prose-slate prose-sm max-w-none text-slate-600 mb-6 whitespace-pre-wrap">
+                {selectedEvent.content}
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex items-center gap-2 text-sm">
+                <span className="font-bold text-slate-500">អ្នកចូលរួម:</span>
+                <span className="font-semibold text-brand-blue">
+                  {selectedEvent.audience === 'everyone' ? 'សិស្ស និងគ្រូទាំងអស់' : 
+                   selectedEvent.audience === 'teachers' ? 'សម្រាប់តែគ្រូ' : 'សម្រាប់តែសិស្ស'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
