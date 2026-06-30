@@ -35,6 +35,8 @@ export default function TeacherLayout({ children }) {
     };
     fetchUser();
   }, []);
+
+  useEffect(() => {
     const fetchEvents = async () => {
       try {
         const res = await fetch('/api/announcements');
