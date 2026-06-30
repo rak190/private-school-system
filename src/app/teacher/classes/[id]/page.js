@@ -571,7 +571,6 @@ export default function ClassDetails() {
                         </label>
                       </div>
                     </div>
-                  </div>
                   
                   <div className="pt-4 mt-2 border-t border-slate-100">
                     <h4 className="text-sm font-bold text-slate-700 mb-4">ព័ត៌មានបន្ថែម (ជាជម្រើស)</h4>
