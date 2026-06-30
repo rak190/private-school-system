@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Users, Edit, Trash2, Plus, X, BookOpen, Clock, UserPlus, Loader2, CheckCircle, AlertCircle, Download, Upload } from 'lucide-react';
+import { ArrowLeft, Save, Users, Edit, Trash2, Plus, X, BookOpen, Clock, UserPlus, Loader2, CheckCircle, AlertCircle, Download, Upload, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function ClassDetails() {
   const { id } = useParams();
@@ -26,10 +26,11 @@ export default function ClassDetails() {
   const [bulkInput, setBulkInput] = useState('');
   const [csvFile, setCsvFile] = useState(null);
   const [isSavingStudent, setIsSavingStudent] = useState(false);
+  const [showClassInfo, setShowClassInfo] = useState(false);
 
   const handleExportTemplate = () => {
-    const headers = "នាមត្រកូល,នាមខ្លួន,ភេទ\n";
-    const sampleRows = "សុខ,តារា,ប្រុស\nចាន់,ធីតា,ស្រី\n";
+    const headers = "នាមត្រកូល,នាមខ្លួន,ភេទ,ថ្ងៃខែឆ្នាំកំណើត,លេខទូរស័ព្ទ,អាសយដ្ឋាន,ឈ្មោះអាណាព្យាបាល\n";
+    const sampleRows = "សុខ,តារា,ប្រុស,01/01/2010,012345678,ភ្នំពេញ,សុខ សាន\nចាន់,ធីតា,ស្រី,02/02/2011,098765432,កណ្តាល,ចាន់ រតនា\n";
     // Prefix with BOM for Excel UTF-8 support
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + headers + sampleRows;
     const encodedUri = encodeURI(csvContent);
@@ -203,8 +204,13 @@ export default function ClassDetails() {
                  let gender = 'ប្រុស';
                  if (['ស្រី', 'F', 'f', 'female', 'Female'].includes(genderRaw)) gender = 'ស្រី';
                  
+                 const dateOfBirth = parts[3] || null;
+                 const phoneNumber = parts[4] || null;
+                 const address = parts[5] || null;
+                 const parentName = parts[6] || null;
+
                  if (lastName && firstName) {
-                   studentsArray.push({ lastName, firstName, gender, classId: Number(id) });
+                   studentsArray.push({ lastName, firstName, gender, dateOfBirth, phoneNumber, address, parentName, classId: Number(id) });
                  }
                }
              }
@@ -254,7 +260,7 @@ export default function ClassDetails() {
         const res = await fetch(`/api/students/${studentForm.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ firstName: studentForm.firstName, lastName: studentForm.lastName, gender: studentForm.gender })
+          body: JSON.stringify(studentForm)
         });
         if (res.ok) {
           fetchClassDetails();
@@ -322,25 +328,34 @@ export default function ClassDetails() {
         <h1 className="text-2xl font-bold text-slate-800">ព័ត៌មានលម្អិតថ្នាក់រៀន</h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Class Details Panel */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-[24px] border border-slate-100 p-6 shadow-sm">
+      {/* Top Collapsible Header for Class Details */}
+      <div className="bg-white rounded-[24px] border border-slate-100 p-6 shadow-sm mb-6 transition-all">
+        <div className="flex justify-between items-center cursor-pointer group" onClick={() => setShowClassInfo(!showClassInfo)}>
+          <div className="flex items-center gap-4">
+             <div className={`w-12 h-12 rounded-xl ${classData.color || 'bg-brand-blue'} text-white flex items-center justify-center font-bold text-xl shadow-md uppercase`}>
+               {classData.className.replace('ថ្នាក់ទី ', '').substring(0, 2)}
+             </div>
+             <div>
+               <h2 className="text-xl font-bold text-slate-800">{classData.className}</h2>
+               <p className="text-xs font-semibold text-brand-muted">សិស្សសរុប {classData.students?.length || 0} នាក់</p>
+             </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <button onClick={(e) => { e.stopPropagation(); setIsEditingClass(true); setShowClassInfo(true); }} className="p-2 bg-slate-50 text-slate-500 rounded-full hover:text-brand-blue hover:bg-blue-50 transition-colors">
+              <Edit className="w-4 h-4" />
+            </button>
+            <div className="p-2 bg-slate-50 text-slate-500 rounded-full group-hover:bg-slate-100 transition-colors">
+              {showClassInfo ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </div>
+          </div>
+        </div>
+
+        {showClassInfo && (
+          <div className="mt-6 pt-6 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
             {!isEditingClass ? (
-              <>
-                <div className="flex justify-between items-start mb-6">
-                  <div className={`w-16 h-16 rounded-2xl ${classData.color || 'bg-brand-blue'} text-white flex items-center justify-center font-bold text-2xl shadow-md uppercase`}>
-                    {classData.className.replace('ថ្នាក់ទី ', '').substring(0, 2)}
-                  </div>
-                  <button onClick={() => setIsEditingClass(true)} className="p-2 bg-slate-50 text-slate-500 rounded-full hover:text-brand-blue hover:bg-blue-50 transition-colors">
-                    <Edit className="w-4 h-4" />
-                  </button>
-                </div>
-                <h2 className="text-2xl font-bold text-slate-800 mb-1">{classData.className}</h2>
-                <p className="text-sm font-semibold text-brand-muted mb-6">ឆ្នាំសិក្សា {classData.academicYear}</p>
-                
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="space-y-4">
+                  <p className="text-sm font-semibold text-brand-muted">ឆ្នាំសិក្សា {classData.academicYear}</p>
                   <div className="flex items-center gap-3 text-sm font-medium text-slate-600 bg-slate-50 p-3 rounded-xl">
                     <BookOpen className="w-5 h-5 text-brand-blue shrink-0" />
                     <span>{classData.subject || 'មិនទាន់មានមុខវិជ្ជា'}</span>
@@ -349,63 +364,60 @@ export default function ClassDetails() {
                     <Clock className="w-5 h-5 text-emerald-500 shrink-0" />
                     <span>{classData.schedule || 'មិនទាន់កំណត់ម៉ោង'}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm font-medium text-slate-600 bg-slate-50 p-3 rounded-xl">
-                    <Users className="w-5 h-5 text-purple-500 shrink-0" />
-                    <span>សិស្សសរុប {classData.students?.length || 0} នាក់</span>
-                  </div>
                 </div>
-
-                <div className="mt-6 pt-6 border-t border-slate-100">
+                <div className="md:col-span-2">
                   <div className="flex justify-between text-xs font-bold mb-2">
                     <span className="text-slate-500">វឌ្ឍនភាពមេរៀន</span>
                     <span className="text-brand-blue">{classData.progress || 0}%</span>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2.5">
+                  <div className="w-full bg-slate-100 rounded-full h-2.5 mb-6">
                     <div className={`h-2.5 rounded-full ${classData.color || 'bg-brand-blue'}`} style={{ width: `${classData.progress || 0}%` }}></div>
                   </div>
                 </div>
-              </>
+              </div>
             ) : (
               <form onSubmit={handleUpdateClass} className="space-y-4">
                 <h3 className="font-bold text-slate-800 mb-4">កែប្រែព័ត៌មានថ្នាក់</h3>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase">ឈ្មោះថ្នាក់</label>
-                  <input required type="text" value={classForm.className} onChange={e => setClassForm({...classForm, className: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">ឈ្មោះថ្នាក់</label>
+                    <input required type="text" value={classForm.className} onChange={e => setClassForm({...classForm, className: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">មុខវិជ្ជា</label>
+                    <input type="text" value={classForm.subject || ''} onChange={e => setClassForm({...classForm, subject: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">កាលវិភាគ</label>
+                    <input type="text" value={classForm.schedule || ''} onChange={e => setClassForm({...classForm, schedule: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">វឌ្ឍនភាពមេរៀន (%)</label>
+                    <input type="number" min="0" max="100" value={classForm.progress || 0} onChange={e => setClassForm({...classForm, progress: parseInt(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase">មុខវិជ្ជា</label>
-                  <input type="text" value={classForm.subject || ''} onChange={e => setClassForm({...classForm, subject: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase">កាលវិភាគ</label>
-                  <input type="text" value={classForm.schedule || ''} onChange={e => setClassForm({...classForm, schedule: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase">វឌ្ឍនភាពមេរៀន (%)</label>
-                  <input type="number" min="0" max="100" value={classForm.progress || 0} onChange={e => setClassForm({...classForm, progress: parseInt(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
-                </div>
-                <div className="space-y-2">
+                <div className="space-y-2 mt-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">ពណ៌</label>
                   <div className="flex gap-2">
                     {['bg-brand-blue', 'bg-brand-yellow', 'bg-emerald-500', 'bg-purple-500', 'bg-rose-500'].map(c => (
-                      <button key={c} type="button" onClick={() => setClassForm({...classForm, color: c})} className={`w-6 h-6 rounded-full ${c} ${classForm.color === c ? 'ring-2 ring-offset-2 ring-slate-400' : ''}`}></button>
+                      <button key={c} type="button" onClick={() => setClassForm({...classForm, color: c})} className={`w-8 h-8 rounded-full ${c} ${classForm.color === c ? 'ring-2 ring-offset-2 ring-slate-400' : ''}`}></button>
                     ))}
                   </div>
                 </div>
-                <div className="flex gap-2 pt-2">
-                  <button type="button" onClick={() => setIsEditingClass(false)} className="flex-1 px-4 py-2.5 rounded-full text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">បោះបង់</button>
-                  <button type="submit" disabled={isSavingClass} className="flex-1 px-4 py-2.5 rounded-full text-sm font-bold text-white bg-brand-blue hover:bg-blue-600 shadow-sm shadow-blue-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                <div className="flex gap-2 pt-4">
+                  <button type="button" onClick={() => setIsEditingClass(false)} className="px-6 py-2.5 rounded-full text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">បោះបង់</button>
+                  <button type="submit" disabled={isSavingClass} className="px-6 py-2.5 rounded-full text-sm font-bold text-white bg-brand-blue hover:bg-blue-600 shadow-sm shadow-blue-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
                     {isSavingClass ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} រក្សាទុក
                   </button>
                 </div>
               </form>
             )}
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Students List */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-[24px] border border-slate-100 p-6 shadow-sm h-full flex flex-col">
+      {/* Full Width Students List */}
+      <div className="bg-white rounded-[24px] border border-slate-100 p-6 shadow-sm flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-slate-800 text-lg">បញ្ជីសិស្ស ({classData.students?.length || 0})</h3>
               <div className="flex gap-2">
@@ -427,9 +439,13 @@ export default function ClassDetails() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    <th className="pb-3 pl-4">នាមត្រកូល និងនាមខ្លួន</th>
-                    <th className="pb-3">ភេទ</th>
-                    <th className="pb-3 text-right pr-4">សកម្មភាព</th>
+                    <th className="pb-3 pl-4 whitespace-nowrap">នាមត្រកូល និងនាមខ្លួន</th>
+                    <th className="pb-3 whitespace-nowrap">ភេទ</th>
+                    <th className="pb-3 whitespace-nowrap">ថ្ងៃខែឆ្នាំកំណើត</th>
+                    <th className="pb-3 whitespace-nowrap">លេខទូរស័ព្ទ</th>
+                    <th className="pb-3 whitespace-nowrap">អាសយដ្ឋាន</th>
+                    <th className="pb-3 whitespace-nowrap">ឈ្មោះអាណាព្យាបាល</th>
+                    <th className="pb-3 text-right pr-4 whitespace-nowrap">សកម្មភាព</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm font-medium text-slate-700">
@@ -438,13 +454,17 @@ export default function ClassDetails() {
                   ) : (
                     classData.students?.map((student, idx) => (
                       <tr key={student.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                        <td className="py-3 pl-4 flex items-center gap-3">
+                        <td className="py-3 pl-4 flex items-center gap-3 whitespace-nowrap">
                           <div className="w-8 h-8 rounded-full bg-blue-50 text-brand-blue flex items-center justify-center text-xs font-bold">
                             {idx + 1}
                           </div>
                           {student.lastName} {student.firstName}
                         </td>
-                        <td className="py-3">{student.gender}</td>
+                        <td className="py-3 whitespace-nowrap">{student.gender}</td>
+                        <td className="py-3 text-slate-500 whitespace-nowrap">{student.dateOfBirth || '-'}</td>
+                        <td className="py-3 text-slate-500 whitespace-nowrap">{student.phoneNumber || '-'}</td>
+                        <td className="py-3 text-slate-500 whitespace-nowrap max-w-[150px] truncate" title={student.address}>{student.address || '-'}</td>
+                        <td className="py-3 text-slate-500 whitespace-nowrap max-w-[150px] truncate" title={student.parentName}>{student.parentName || '-'}</td>
                         <td className="py-3 text-right pr-4 flex justify-end gap-1">
                           <button onClick={() => {
                             setStudentModalMode('edit');
@@ -460,13 +480,12 @@ export default function ClassDetails() {
               </table>
             </div>
           </div>
-        </div>
       </div>
 
       {/* Student Modal */}
       {showStudentModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
               <h2 className="text-xl font-bold text-slate-800">{studentModalMode === 'add' ? 'បន្ថែមសិស្សមកក្នុងថ្នាក់' : 'កែប្រែព័ត៌មានសិស្ស'}</h2>
               <button onClick={() => setShowStudentModal(false)} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 transition-colors">
@@ -539,17 +558,40 @@ export default function ClassDetails() {
                       <input required type="text" value={studentForm.firstName} onChange={e => setStudentForm({...studentForm, firstName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase">ភេទ</label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="gender" value="ប្រុស" checked={studentForm.gender === 'ប្រុស'} onChange={e => setStudentForm({...studentForm, gender: e.target.value})} className="w-4 h-4 text-brand-blue focus:ring-brand-blue" />
-                        <span className="text-sm font-semibold text-slate-700">ប្រុស</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="gender" value="ស្រី" checked={studentForm.gender === 'ស្រី'} onChange={e => setStudentForm({...studentForm, gender: e.target.value})} className="w-4 h-4 text-brand-blue focus:ring-brand-blue" />
-                        <span className="text-sm font-semibold text-slate-700">ស្រី</span>
-                      </label>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase">ភេទ</label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" name="gender" value="ប្រុស" checked={studentForm.gender === 'ប្រុស'} onChange={e => setStudentForm({...studentForm, gender: e.target.value})} className="w-4 h-4 text-brand-blue focus:ring-brand-blue" />
+                          <span className="text-sm font-semibold text-slate-700">ប្រុស</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" name="gender" value="ស្រី" checked={studentForm.gender === 'ស្រី'} onChange={e => setStudentForm({...studentForm, gender: e.target.value})} className="w-4 h-4 text-brand-blue focus:ring-brand-blue" />
+                          <span className="text-sm font-semibold text-slate-700">ស្រី</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 mt-2 border-t border-slate-100">
+                    <h4 className="text-sm font-bold text-slate-700 mb-4">ព័ត៌មានបន្ថែម (ជាជម្រើស)</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase">ថ្ងៃខែឆ្នាំកំណើត</label>
+                        <input type="text" placeholder="ឧ. 01/01/2010" value={studentForm.dateOfBirth || ''} onChange={e => setStudentForm({...studentForm, dateOfBirth: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase">លេខទូរស័ព្ទ</label>
+                        <input type="text" placeholder="ឧ. 012345678" value={studentForm.phoneNumber || ''} onChange={e => setStudentForm({...studentForm, phoneNumber: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase">អាសយដ្ឋាន</label>
+                        <input type="text" placeholder="ឧ. ភ្នំពេញ" value={studentForm.address || ''} onChange={e => setStudentForm({...studentForm, address: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase">ឈ្មោះអាណាព្យាបាល</label>
+                        <input type="text" placeholder="ឧ. សុខ សាន" value={studentForm.parentName || ''} onChange={e => setStudentForm({...studentForm, parentName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white" />
+                      </div>
                     </div>
                   </div>
                 </>

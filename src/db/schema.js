@@ -14,11 +14,15 @@ export const classes = pgTable("classes", {
 
 export const students = pgTable("students", {
   id: serial("id").primaryKey(),
-  firstName: varchar("first_name", { length: 255 }).notNull(),
-  lastName: varchar("last_name", { length: 255 }).notNull(),
-  gender: varchar("gender", { length: 50 }),
+  firstName: varchar("first_name", { length: 100 }).notNull(),
+  lastName: varchar("last_name", { length: 100 }).notNull(),
+  gender: varchar("gender", { length: 20 }).notNull(),
+  dateOfBirth: varchar("date_of_birth", { length: 20 }),
+  phoneNumber: varchar("phone_number", { length: 50 }),
+  address: text("address"),
+  parentName: varchar("parent_name", { length: 255 }),
   classId: integer("class_id").references(() => classes.id),
-  status: varchar("status", { length: 50 }).default('សកម្ម'),
+  status: varchar("status", { length: 50 }).notNull().default('សកម្ម'), // សកម្ម, ឈប់ឈប់
 });
 
 export const attendance = pgTable("attendance", {

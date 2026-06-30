@@ -21,6 +21,10 @@ export async function GET(request) {
       firstName: students.firstName,
       lastName: students.lastName,
       gender: students.gender,
+      dateOfBirth: students.dateOfBirth,
+      phoneNumber: students.phoneNumber,
+      address: students.address,
+      parentName: students.parentName,
       classId: students.classId,
       status: students.status,
       className: classes.className
@@ -57,6 +61,10 @@ export async function POST(request) {
         firstName: s.firstName,
         lastName: s.lastName,
         gender: s.gender || 'ប្រុស',
+        dateOfBirth: s.dateOfBirth || null,
+        phoneNumber: s.phoneNumber || null,
+        address: s.address || null,
+        parentName: s.parentName || null,
         classId: s.classId || null,
         status: s.status || 'សកម្ម'
       }));
@@ -66,12 +74,16 @@ export async function POST(request) {
     }
 
     // Handle single insert
-    const { firstName, lastName, gender, classId, status } = body;
+    const { firstName, lastName, gender, dateOfBirth, phoneNumber, address, parentName, classId, status } = body;
 
     const newStudent = await db.insert(students).values({
       firstName,
       lastName,
       gender: gender || 'ប្រុស',
+      dateOfBirth: dateOfBirth || null,
+      phoneNumber: phoneNumber || null,
+      address: address || null,
+      parentName: parentName || null,
       classId: classId || null,
       status: status || 'សកម្ម'
     }).returning();

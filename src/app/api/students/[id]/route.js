@@ -15,18 +15,21 @@ export async function PUT(request, { params }) {
 
   try {
     const body = await request.json();
-    const { firstName, lastName, gender, classId } = body;
-    
-    // We update classId dynamically. If they pass classId: null, it removes them from the class.
-    const updateData = {};
-    if (firstName !== undefined) updateData.firstName = firstName;
-    if (lastName !== undefined) updateData.lastName = lastName;
-    if (gender !== undefined) updateData.gender = gender;
-    if (classId !== undefined) updateData.classId = classId;
+    const { firstName, lastName, gender, dateOfBirth, phoneNumber, address, parentName, classId, status } = body;
 
     const updatedStudent = await db.update(students)
-      .set(updateData)
-      .where(eq(students.id, id))
+      .set({
+        firstName,
+        lastName,
+        gender: gender || 'ប្រុស',
+        dateOfBirth: dateOfBirth || null,
+        phoneNumber: phoneNumber || null,
+        address: address || null,
+        parentName: parentName || null,
+        classId: classId || null,
+        status: status || 'សកម្ម'
+      })
+      .where(eq(students.id, Number(id)))
       .returning();
 
     if (!updatedStudent.length) {
