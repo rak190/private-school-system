@@ -162,11 +162,18 @@ export default function AIPage() {
                   value={formData.gradeLevel}
                   onChange={(e) => setFormData({...formData, gradeLevel: e.target.value})}
                 >
-                  <option value="អនុវិទ្យាល័យ">អនុវិទ្យាល័យ</option>
-                  <option value="ថ្នាក់ទី៩">ថ្នាក់ទី៩</option>
-                  <option value="ថ្នាក់ទី១០">ថ្នាក់ទី១០</option>
-                  <option value="ថ្នាក់ទី១១">ថ្នាក់ទី១១</option>
-                  <option value="ថ្នាក់ទី១២">ថ្នាក់ទី១២</option>
+                  <option value="ថ្នាក់ទី១">ថ្នាក់ទី១ (Grade 1)</option>
+                  <option value="ថ្នាក់ទី២">ថ្នាក់ទី២ (Grade 2)</option>
+                  <option value="ថ្នាក់ទី៣">ថ្នាក់ទី៣ (Grade 3)</option>
+                  <option value="ថ្នាក់ទី៤">ថ្នាក់ទី៤ (Grade 4)</option>
+                  <option value="ថ្នាក់ទី៥">ថ្នាក់ទី៥ (Grade 5)</option>
+                  <option value="ថ្នាក់ទី៦">ថ្នាក់ទី៦ (Grade 6)</option>
+                  <option value="ថ្នាក់ទី៧">ថ្នាក់ទី៧ (Grade 7)</option>
+                  <option value="ថ្នាក់ទី៨">ថ្នាក់ទី៨ (Grade 8)</option>
+                  <option value="ថ្នាក់ទី៩">ថ្នាក់ទី៩ (Grade 9)</option>
+                  <option value="ថ្នាក់ទី១០">ថ្នាក់ទី១០ (Grade 10)</option>
+                  <option value="ថ្នាក់ទី១១">ថ្នាក់ទី១១ (Grade 11)</option>
+                  <option value="ថ្នាក់ទី១២">ថ្នាក់ទី១២ (Grade 12)</option>
                 </select>
               </div>
               <div className="space-y-2">
