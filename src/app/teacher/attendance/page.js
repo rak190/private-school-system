@@ -17,6 +17,8 @@ export default function TeacherAttendance() {
   const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [reportData, setReportData] = useState([]);
   const [reportLoading, setReportLoading] = useState(false);
+  
+  const [sortConfig, setSortConfig] = useState({ key: 'totalAbsent', direction: 'desc' });
 
   useEffect(() => {
     fetchClasses();
@@ -86,6 +88,26 @@ export default function TeacherAttendance() {
       setReportLoading(false);
     }
   };
+
+  const handleSort = (key) => {
+    let direction = 'desc';
+    if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      direction = 'asc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedReportData = [...reportData].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+    
+    let aVal = a[sortConfig.key];
+    let bVal = b[sortConfig.key];
+    
+    if (typeof aVal === 'string') {
+      return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    }
+    return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+  });
 
   const handleStatusChange = (studentId, newStatus) => {
     setStudents(students.map(s => s.id === studentId ? { ...s, status: newStatus } : s));
@@ -315,14 +337,22 @@ export default function TeacherAttendance() {
                     <thead>
                       <tr className="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
                         <th className="pb-3 pl-4 w-16">ល.រ</th>
-                        <th className="pb-3">នាមត្រកូល និងនាមខ្លួន</th>
-                        <th className="pb-3 text-center">វត្តមាន</th>
-                        <th className="pb-3 text-center">អវត្តមាន</th>
-                        <th className="pb-3 text-center">ច្បាប់</th>
+                        <th className="pb-3 cursor-pointer hover:text-slate-600 transition-colors select-none" onClick={() => handleSort('firstName')}>
+                          នាមត្រកូល និងនាមខ្លួន {sortConfig.key === 'firstName' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                        </th>
+                        <th className="pb-3 text-center cursor-pointer hover:text-slate-600 transition-colors select-none" onClick={() => handleSort('totalPresent')}>
+                          វត្តមាន {sortConfig.key === 'totalPresent' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                        </th>
+                        <th className="pb-3 text-center cursor-pointer hover:text-slate-600 transition-colors select-none" onClick={() => handleSort('totalAbsent')}>
+                          អវត្តមាន {sortConfig.key === 'totalAbsent' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                        </th>
+                        <th className="pb-3 text-center cursor-pointer hover:text-slate-600 transition-colors select-none" onClick={() => handleSort('totalLeave')}>
+                          ច្បាប់ {sortConfig.key === 'totalLeave' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="text-sm font-medium text-slate-700">
-                      {reportData.map((student, idx) => (
+                      {sortedReportData.map((student, idx) => (
                         <tr key={student.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                           <td className="py-4 pl-4 text-slate-400">{idx + 1}</td>
                           <td className="py-4 text-slate-800 font-bold">{student.lastName} {student.firstName}</td>
