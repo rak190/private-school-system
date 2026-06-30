@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Users, Edit, Trash2, Plus, X, BookOpen, Clock, UserPlus } from 'lucide-react';
+import { ArrowLeft, Save, Users, Edit, Trash2, Plus, X, BookOpen, Clock, UserPlus, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function ClassDetails() {
   const { id } = useParams();
@@ -10,6 +10,7 @@ export default function ClassDetails() {
   
   const [classData, setClassData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
   
   const [isEditingClass, setIsEditingClass] = useState(false);
   const [classForm, setClassForm] = useState({});
@@ -21,7 +22,14 @@ export default function ClassDetails() {
   const [studentForm, setStudentForm] = useState({ firstName: '', lastName: '', gender: 'ប្រុស' });
   const [unassignedStudents, setUnassignedStudents] = useState([]);
   const [selectedUnassignedId, setSelectedUnassignedId] = useState('');
-  const [addMethod, setAddMethod] = useState('new'); // 'new' or 'existing'
+  const [addMethod, setAddMethod] = useState('new'); // 'new', 'existing', or 'bulk'
+  const [bulkInput, setBulkInput] = useState('');
+  const [isSavingStudent, setIsSavingStudent] = useState(false);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     fetchClassDetails();
@@ -73,17 +81,43 @@ export default function ClassDetails() {
         if (json.success) {
           setClassData({ ...classData, ...json.data });
           setIsEditingClass(false);
+          showToast('រក្សាទុកព័ត៌មានថ្នាក់រៀនជោគជ័យ');
         }
+      } else {
+        showToast('មានបញ្ហាក្នុងការរក្សាទុក', 'error');
       }
     } catch (err) {
       console.error('Failed to update class:', err);
+      showToast('មានបញ្ហាក្នុងការរក្សាទុក', 'error');
     } finally {
       setIsSavingClass(false);
     }
   };
 
+  const parseBulkInput = (input) => {
+    const lines = input.split('\n').filter(line => line.trim() !== '');
+    return lines.map(line => {
+      // Basic parsing: split by space. E.g., "សុខ តារា ប្រុស"
+      const parts = line.trim().split(/\s+/);
+      const genderRaw = parts[parts.length - 1];
+      let gender = 'ប្រុស'; // default
+      let nameParts = parts;
+
+      if (['ប្រុស', 'ស្រី', 'M', 'F', 'm', 'f'].includes(genderRaw)) {
+        gender = ['ស្រី', 'F', 'f'].includes(genderRaw) ? 'ស្រី' : 'ប្រុស';
+        nameParts = parts.slice(0, -1);
+      }
+      
+      const lastName = nameParts[0] || 'មិនស្គាល់';
+      const firstName = nameParts.slice(1).join(' ') || 'មិនស្គាល់';
+
+      return { firstName, lastName, gender, classId: Number(id) };
+    });
+  };
+
   const handleSaveStudent = async (e) => {
     e.preventDefault();
+    setIsSavingStudent(true);
     try {
       if (studentModalMode === 'add') {
         if (addMethod === 'new') {
@@ -96,6 +130,29 @@ export default function ClassDetails() {
           if (res.ok) {
             fetchClassDetails();
             setShowStudentModal(false);
+            showToast('បន្ថែមសិស្សថ្មីជោគជ័យ');
+          } else {
+            showToast('មិនអាចបន្ថែមសិស្សបានទេ', 'error');
+          }
+        } else if (addMethod === 'bulk') {
+           const studentsArray = parseBulkInput(bulkInput);
+           if (studentsArray.length === 0) {
+             showToast('សូមបញ្ចូលទិន្នន័យសិស្ស', 'error');
+             setIsSavingStudent(false);
+             return;
+           }
+           const res = await fetch('/api/students', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ students: studentsArray })
+          });
+          if (res.ok) {
+            fetchClassDetails();
+            setShowStudentModal(false);
+            showToast(`បន្ថែមសិស្សចំនួន ${studentsArray.length} នាក់ជោគជ័យ`);
+            setBulkInput('');
+          } else {
+            showToast('មិនអាចបន្ថែមសិស្សបានទេ', 'error');
           }
         } else if (addMethod === 'existing' && selectedUnassignedId) {
           // Assign existing student to this class
@@ -108,6 +165,9 @@ export default function ClassDetails() {
             fetchClassDetails();
             fetchUnassignedStudents();
             setShowStudentModal(false);
+            showToast('បញ្ចូលសិស្សទៅថ្នាក់ជោគជ័យ');
+          } else {
+             showToast('មិនអាចបញ្ចូលសិស្សបានទេ', 'error');
           }
         }
       } else if (studentModalMode === 'edit') {
@@ -120,15 +180,21 @@ export default function ClassDetails() {
         if (res.ok) {
           fetchClassDetails();
           setShowStudentModal(false);
+          showToast('កែប្រែព័ត៌មានសិស្សជោគជ័យ');
+        } else {
+           showToast('មិនអាចកែប្រែព័ត៌មានសិស្សបានទេ', 'error');
         }
       }
     } catch (err) {
       console.error('Failed to save student:', err);
+      showToast('មានបញ្ហាក្នុងការរក្សាទុក', 'error');
+    } finally {
+      setIsSavingStudent(false);
     }
   };
 
-  const handleRemoveStudent = async (studentId) => {
-    if (confirm('តើអ្នកពិតជាចង់ដកសិស្សនេះចេញពីថ្នាក់មែនទេ?')) {
+  const handleRemoveStudent = async (studentId, studentName) => {
+    if (confirm(`តើអ្នកពិតជាចង់ដកសិស្ស ${studentName} ចេញពីថ្នាក់មែនទេ?`)) {
       try {
         const res = await fetch(`/api/students/${studentId}`, {
           method: 'PUT',
@@ -138,21 +204,38 @@ export default function ClassDetails() {
         if (res.ok) {
           fetchClassDetails();
           fetchUnassignedStudents();
+          showToast('ដកសិស្សចេញពីថ្នាក់ជោគជ័យ');
+        } else {
+          showToast('មិនអាចដកសិស្សចេញពីថ្នាក់បានទេ', 'error');
         }
       } catch (err) {
         console.error('Failed to remove student:', err);
+        showToast('មិនអាចដកសិស្សចេញពីថ្នាក់បានទេ', 'error');
       }
     }
   };
 
   if (loading) {
-    return <div className="p-10 text-center text-slate-500">កំពុងទាញយកទិន្នន័យ...</div>;
+    return (
+       <div className="flex justify-center items-center h-full">
+         <Loader2 className="w-8 h-8 text-brand-blue animate-spin" />
+       </div>
+    );
   }
 
   if (!classData) return null;
 
   return (
     <>
+      {toast && (
+        <div className={`fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-sm font-bold animate-in slide-in-from-top-5 duration-300 ${
+          toast.type === 'error' ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'
+        }`}>
+          {toast.type === 'error' ? <AlertCircle className="w-5 h-5 shrink-0" /> : <CheckCircle className="w-5 h-5 shrink-0" />}
+          {toast.message}
+        </div>
+      )}
+
       <div className="mb-6 flex items-center gap-4">
         <Link href="/teacher/classes" className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-500 shadow-sm hover:text-brand-blue hover:bg-blue-50 transition-colors">
           <ArrowLeft className="w-5 h-5" />
@@ -232,8 +315,8 @@ export default function ClassDetails() {
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button type="button" onClick={() => setIsEditingClass(false)} className="flex-1 px-4 py-2.5 rounded-full text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">បោះបង់</button>
-                  <button type="submit" disabled={isSavingClass} className="flex-1 px-4 py-2.5 rounded-full text-sm font-bold text-white bg-brand-blue hover:bg-blue-600 shadow-sm shadow-blue-200 transition-colors flex items-center justify-center gap-2">
-                    <Save className="w-4 h-4" /> រក្សាទុក
+                  <button type="submit" disabled={isSavingClass} className="flex-1 px-4 py-2.5 rounded-full text-sm font-bold text-white bg-brand-blue hover:bg-blue-600 shadow-sm shadow-blue-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                    {isSavingClass ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} រក្សាទុក
                   </button>
                 </div>
               </form>
@@ -267,7 +350,7 @@ export default function ClassDetails() {
                 </thead>
                 <tbody className="text-sm font-medium text-slate-700">
                   {classData.students?.length === 0 ? (
-                    <tr><td colSpan="3" className="py-8 text-center text-slate-400 font-medium">មិនទាន់មានសិស្សនៅក្នុងថ្នាក់នេះទេ</td></tr>
+                    <tr><td colSpan="3" className="py-12 text-center text-slate-400 font-medium">មិនទាន់មានសិស្សនៅក្នុងថ្នាក់នេះទេ</td></tr>
                   ) : (
                     classData.students?.map((student, idx) => (
                       <tr key={student.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
@@ -284,7 +367,7 @@ export default function ClassDetails() {
                             setStudentForm(student);
                             setShowStudentModal(true);
                           }} className="p-2 text-slate-400 hover:text-brand-blue hover:bg-blue-50 rounded-lg transition-colors"><Edit className="w-4 h-4" /></button>
-                          <button onClick={() => handleRemoveStudent(student.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleRemoveStudent(student.id, `${student.lastName} ${student.firstName}`)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </td>
                       </tr>
                     ))
@@ -310,9 +393,10 @@ export default function ClassDetails() {
             <form onSubmit={handleSaveStudent} className="p-6 space-y-4">
               
               {studentModalMode === 'add' && (
-                <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
-                  <button type="button" onClick={() => setAddMethod('new')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${addMethod === 'new' ? 'bg-white shadow-sm text-brand-blue' : 'text-slate-500'}`}>បង្កើតសិស្សថ្មី</button>
-                  <button type="button" onClick={() => setAddMethod('existing')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${addMethod === 'existing' ? 'bg-white shadow-sm text-brand-blue' : 'text-slate-500'}`}>ជ្រើសរើសសិស្សដែលមានស្រាប់</button>
+                <div className="flex bg-slate-100 p-1 rounded-xl mb-4 overflow-x-auto whitespace-nowrap hide-scrollbar">
+                  <button type="button" onClick={() => setAddMethod('new')} className={`flex-1 min-w-[100px] py-2 px-3 text-xs font-bold rounded-lg transition-colors ${addMethod === 'new' ? 'bg-white shadow-sm text-brand-blue' : 'text-slate-500'}`}>សិស្សថ្មី</button>
+                  <button type="button" onClick={() => setAddMethod('bulk')} className={`flex-1 min-w-[100px] py-2 px-3 text-xs font-bold rounded-lg transition-colors ${addMethod === 'bulk' ? 'bg-white shadow-sm text-brand-blue' : 'text-slate-500'}`}>បញ្ជូលច្រើននាក់</button>
+                  <button type="button" onClick={() => setAddMethod('existing')} className={`flex-1 min-w-[100px] py-2 px-3 text-xs font-bold rounded-lg transition-colors ${addMethod === 'existing' ? 'bg-white shadow-sm text-brand-blue' : 'text-slate-500'}`}>ជ្រើសរើស</button>
                 </div>
               )}
 
@@ -326,6 +410,20 @@ export default function ClassDetails() {
                     ))}
                   </select>
                   {unassignedStudents.length === 0 && <p className="text-xs text-rose-500 mt-1">គ្មានសិស្សដែលមិនទាន់មានថ្នាក់ទេ</p>}
+                </div>
+              ) : studentModalMode === 'add' && addMethod === 'bulk' ? (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">បញ្ជូលឈ្មោះសិស្សជាជួរ</label>
+                  <p className="text-xs text-slate-400 mb-2">ទម្រង់: &quot;នាមត្រកូល នាមខ្លួន ភេទ&quot; ឧទាហរណ៍:</p>
+                  <pre className="text-xs bg-slate-50 text-slate-600 p-2 rounded-lg border border-slate-100">សុខ តារា ប្រុស<br/>ចាន់ ធីតា ស្រី</pre>
+                  <textarea 
+                    rows={6}
+                    required
+                    value={bulkInput}
+                    onChange={(e) => setBulkInput(e.target.value)}
+                    placeholder="សុខ តារា ប្រុស&#10;ចាន់ ធីតា ស្រី"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-brand-blue focus:bg-white resize-none"
+                  ></textarea>
                 </div>
               ) : (
                 <>
@@ -357,7 +455,8 @@ export default function ClassDetails() {
               
               <div className="pt-6 flex justify-end gap-3">
                 <button type="button" onClick={() => setShowStudentModal(false)} className="px-5 py-2.5 rounded-full text-sm font-bold text-slate-500 hover:bg-slate-50">បោះបង់</button>
-                <button type="submit" disabled={studentModalMode === 'add' && addMethod === 'existing' && !selectedUnassignedId} className="bg-brand-blue text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-blue-600 shadow-sm shadow-blue-200 disabled:opacity-50">
+                <button type="submit" disabled={isSavingStudent || (studentModalMode === 'add' && addMethod === 'existing' && !selectedUnassignedId)} className="bg-brand-blue text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-blue-600 shadow-sm shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {isSavingStudent ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   {studentModalMode === 'add' ? 'បន្ថែមសិស្ស' : 'រក្សាទុក'}
                 </button>
               </div>

@@ -50,12 +50,28 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
+    
+    // Handle bulk insert
+    if (body.students && Array.isArray(body.students)) {
+      const studentsToInsert = body.students.map(s => ({
+        firstName: s.firstName,
+        lastName: s.lastName,
+        gender: s.gender || 'ប្រុស',
+        classId: s.classId || null,
+        status: s.status || 'សកម្ម'
+      }));
+      
+      const newStudents = await db.insert(students).values(studentsToInsert).returning();
+      return NextResponse.json({ success: true, data: newStudents });
+    }
+
+    // Handle single insert
     const { firstName, lastName, gender, classId, status } = body;
 
     const newStudent = await db.insert(students).values({
       firstName,
       lastName,
-      gender,
+      gender: gender || 'ប្រុស',
       classId: classId || null,
       status: status || 'សកម្ម'
     }).returning();
