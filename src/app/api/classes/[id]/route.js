@@ -23,7 +23,7 @@ export async function GET(request, { params }) {
 
     // Fetch class details
     const classData = await db.select().from(classes).where(
-      role === 'teacher' ? and(eq(classes.id, id), eq(classes.teacherId, teacherId)) : eq(classes.id, id)
+      role === 'teacher' ? and(eq(classes.id, Number(id)), eq(classes.teacherId, teacherId)) : eq(classes.id, Number(id))
     ).limit(1);
 
     if (!classData.length) {
@@ -31,7 +31,7 @@ export async function GET(request, { params }) {
     }
 
     // Fetch students in this class
-    const classStudents = await db.select().from(students).where(eq(students.classId, id));
+    const classStudents = await db.select().from(students).where(eq(students.classId, Number(id)));
 
     return NextResponse.json({ 
       success: true, 
@@ -61,7 +61,7 @@ export async function PUT(request, { params }) {
     const teacherId = currentUser[0]?.id;
 
     // Verify ownership
-    const existingClass = await db.select().from(classes).where(and(eq(classes.id, id), eq(classes.teacherId, teacherId))).limit(1);
+    const existingClass = await db.select().from(classes).where(and(eq(classes.id, Number(id)), eq(classes.teacherId, teacherId))).limit(1);
     if (!existingClass.length) {
       return NextResponse.json({ success: false, error: 'Class not found or unauthorized' }, { status: 404 });
     }
@@ -71,7 +71,7 @@ export async function PUT(request, { params }) {
 
     const updatedClass = await db.update(classes)
       .set({ className, subject, schedule, progress, color })
-      .where(eq(classes.id, id))
+      .where(eq(classes.id, Number(id)))
       .returning();
 
     return NextResponse.json({ success: true, data: updatedClass[0] });
@@ -96,16 +96,16 @@ export async function DELETE(request, { params }) {
     const teacherId = currentUser[0]?.id;
 
     // Verify ownership
-    const existingClass = await db.select().from(classes).where(and(eq(classes.id, id), eq(classes.teacherId, teacherId))).limit(1);
+    const existingClass = await db.select().from(classes).where(and(eq(classes.id, Number(id)), eq(classes.teacherId, teacherId))).limit(1);
     if (!existingClass.length) {
       return NextResponse.json({ success: false, error: 'Class not found or unauthorized' }, { status: 404 });
     }
 
     // Unassign students from this class instead of deleting them
-    await db.update(students).set({ classId: null }).where(eq(students.classId, id));
+    await db.update(students).set({ classId: null }).where(eq(students.classId, Number(id)));
 
     // Delete the class
-    await db.delete(classes).where(eq(classes.id, id));
+    await db.delete(classes).where(eq(classes.id, Number(id)));
 
     return NextResponse.json({ success: true });
   } catch (error) {

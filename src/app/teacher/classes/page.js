@@ -81,7 +81,32 @@ export default function TeacherClasses() {
       {/* Classes Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {loading ? (
-          <div className="col-span-full py-10 text-center text-brand-muted">កំពុងទាញយកទិន្នន័យ...</div>
+          // Skeleton Loading
+          [...Array(3)].map((_, idx) => (
+            <div key={idx} className="bg-white rounded-[24px] border border-slate-100 p-6 shadow-sm animate-pulse">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-200"></div>
+                  <div>
+                    <div className="h-5 bg-slate-200 rounded w-24 mb-2"></div>
+                    <div className="h-3 bg-slate-200 rounded w-16"></div>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4 mb-6">
+                <div className="h-8 bg-slate-100 rounded-xl w-full"></div>
+                <div className="h-4 bg-slate-100 rounded w-1/2"></div>
+              </div>
+              <div>
+                <div className="h-3 bg-slate-200 rounded w-full mb-2"></div>
+                <div className="h-2 bg-slate-100 rounded-full w-full"></div>
+              </div>
+              <div className="mt-6 pt-5 border-t border-slate-50 flex justify-between items-center">
+                <div className="h-3 bg-slate-200 rounded w-32"></div>
+                <div className="w-8 h-8 rounded-full bg-slate-100"></div>
+              </div>
+            </div>
+          ))
         ) : classes.length === 0 ? (
           <div className="col-span-full py-10 text-center text-brand-muted bg-white rounded-3xl border border-slate-100">
             អ្នកមិនទាន់មានថ្នាក់រៀននៅឡើយទេ។ សូមចុចប៊ូតុង "ថ្នាក់ថ្មី" ដើម្បីបង្កើតថ្នាក់។
